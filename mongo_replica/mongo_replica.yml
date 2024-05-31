@@ -1,0 +1,94 @@
+version: "3.8"
+services:
+  mongodb_2:
+    image: ctilab/mongo:6.0
+    command: mongod  --auth --bind_ip_all --replSet MongoReplicaSet --keyFile /etc/mongo.key
+    restart: always
+    container_name: mongodb_2
+    networks:
+      - Mongo_Cluster
+    depends_on:
+      - mongodb_1
+    ports:
+      - 27018:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "ctilab"
+      MONGO_INITDB_ROOT_PASSWORD: "ctilab@!09"
+    volumes:
+      - /data/PDTIAI_platform/mongo_replica/mongo_2:/var/lib/mongodb
+      - /data/PDTIAI_platform/mongo_replica/mongo_key/mongo.key:/etc/mongo.key
+      #     - /data/PDTIAI_platform/mongo_replica/mongo_conf/mongod.conf:/etc/mongod.conf
+      - /data/PDTIAI_platform/mongo_replica/log/mongodb_2/log:/var/log/mongodb
+      - /data/PDTIAI_platform/mongo_replica/mongo_dump:/data/mongo_dump
+  mongodb_3:
+    image: ctilab/mongo:6.0
+    command: mongod  --auth --bind_ip_all --replSet MongoReplicaSet --keyFile /etc/mongo.key
+    restart: always
+    container_name: mongodb_3
+    networks:
+      - Mongo_Cluster
+    depends_on:
+      - mongodb_2
+    ports:
+      - 27019:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "ctilab"
+      MONGO_INITDB_ROOT_PASSWORD: "ctilab@!09"
+    volumes:
+      - /data/PDTIAI_platform/mongo_replica/mongo_3:/var/lib/mongodb
+      - /data/PDTIAI_platform/mongo_replica/mongo_key/mongo.key:/etc/mongo.key
+      #      - /data/PDTIAI_platform/mongo_replica/mongo_conf/mongod.conf:/etc/mongod.conf
+      - /data/PDTIAI_platform/mongo_replica/log/mongodb_3/log:/var/log/mongodb
+      - /data/PDTIAI_platform/mongo_replica/mongo_dump:/data/mongo_dump
+  mongodb_1:
+    image: ctilab/mongo:6.0
+    command: mongod  --auth --bind_ip_all --replSet MongoReplicaSet --keyFile /etc/mongo.key && mongorestore -u ctilab -p ctilab@!09 /data/mongo_dump/mongo_dafault_dump_240130
+    restart: always
+    container_name: mongodb_1
+    networks:
+      - Mongo_Cluster
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ctilab
+      MONGO_INITDB_ROOT_PASSWORD: ctilab@!09
+    volumes:
+      - /data/PDTIAI_platform/mongo_replica/mongo_1:/var/lib/mongodb
+      - /data/PDTIAI_platform/mongo_replica/mongo_key/mongo.key:/etc/mongo.key
+      #      - /data/PDTIAI_platform/mongo_replica/mongo_conf/mongod.conf:/etc/mongod.conf
+      - /data/PDTIAI_platform/mongo_replica/log/mongodb_1/log:/var/log/mongodb
+      - /data/PDTIAI_platform/mongo_replica/mongo_dump:/data/mongo_dump
+  mongo_setup:
+    image: ctilab/mongo:6.0
+    container_name: mongo_setup
+    depends_on:
+      - mongodb_1
+      - mongodb_2
+      - mongodb_3
+    restart: on-failure
+    networks:
+      - Mongo_Cluster
+    volumes:
+      - /data/PDTIAI_platform/mongo_replica/script:/script
+      - /data/PDTIAI_platform/mongo_replica/mongo_key:/etc/mongo.key
+      - /data/PDTIAI_platform/mongo_replica/mongo_dump:/data/mongo_dump
+    entrypoint: ["/bin/bash", "/script/setup_init.sh", "exit"]
+  mongo_backup:
+    image: ctilab/mongo:6.0
+    container_name: mongo_backup
+    depends_on:
+      - mongodb_1
+      - mongodb_2
+      - mongodb_3
+      - mongo_setup
+    restart: always
+    entrypoint: /bin/bash /script/backup.sh
+    networks:
+      - Mongo_Cluster
+    volumes:
+      - /data/PDTIAI_platform/mongo_replica/script:/script
+      - /data/PDTIAI_platform/mongo_replica/mongo_dump:/data/mongo_dump
+
+networks:
+  Mongo_Cluster:
+    name: Mongo_Cluster

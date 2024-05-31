@@ -1,0 +1,21 @@
+version: "3.8"
+services:
+  DTIAI_WEB:
+    image: ctilab/nginx:latest
+    command: /root/.nvm/versions/node/v20.9.0/bin/pm2 start /data/ecosystem.config.js
+    #    entrypoint: ["/usr/bin/dumb-init", "--", "/start.sh"]
+    ports:
+      - "80:80"
+      - "3000:3000"
+      - "3001:3001"
+    networks:
+      - PDTIAI
+    volumes:
+      - /data/PDTIAI_platform/DTIAI_WEB/client:/data/www
+      - /data/PDTIAI_platform/DTIAI_WEB/server:/data/backend
+      - /data/PDTIAI_platform/DTIAI_WEB/nginx:/etc/nginx
+    deploy:
+      restart_policy:
+        condition: any
+networks:
+  PDTIAI:

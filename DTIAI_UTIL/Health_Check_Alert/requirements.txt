@@ -1,0 +1,7 @@
+psutil
+pyspectator
+GPUtil
+fastapi
+requests
+uvicorn[standard]
+matplotlib

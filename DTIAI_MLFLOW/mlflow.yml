@@ -1,0 +1,74 @@
+version: "3.5"
+services:
+  minio_s3:
+    container_name: minio_s3
+    image: minio/minio
+    restart: unless-stopped
+    ports:
+      - "9005:9000"
+      - "9006:9001"
+    environment:
+      - MINIO_ROOT_USER=${AWS_ACCESS_KEY_ID}
+      - MINIO_ROOT_PASSWORD=${AWS_SECRET_ACCESS_KEY}
+    entrypoint: sh
+    command: -c 'mkdir -p /data/${AWS_BUCKET_NAME} && minio server /data --console-address ":9001"'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 20s
+      retries: 3
+    volumes:
+      - ${MLFLOW_PATH}/minio:/data
+
+  mlflow_db:
+    image: postgres:14.2
+    restart: unless-stopped
+    container_name: mlflow_db
+    expose:
+      - ${DB_PORT}
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PW}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-U", "${DB_USER}"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ${MLFLOW_PATH}/mlflow_db:/var/lib/postgresql/data
+
+  tracker:
+    container_name: mlflow_tracker
+    image: mlflow_tracker
+    restart: unless-stopped
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    depends_on:
+      - "minio_s3"
+      - "mlflow_db"
+    ports:
+      - ${MLFLOW_PORT}:${MLFLOW_PORT}
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_REGION}
+      - MLFLOW_S3_ENDPOINT_URL=http://s3:9005
+      - BACKEND=postgresql://${DB_USER}:${DB_PW}@db:${DB_PORT}/${DB_NAME}
+    networks:
+      - public
+      - internal
+      - traefik
+    entrypoint: >
+      /bin/sh -c "
+        /data/mlflow/wait-for-it.sh db:5432 --timeout=60 -- \
+        mlflow server --port ${MLFLOW_PORT} --host 0.0.0.0 \
+          --backend-store-uri $${BACKEND} \
+          --default-artifact-root minio_s3://${AWS_BUCKET_NAME}/ 
+      "
+    healthcheck:
+      test: ["CMD", "wget", "-O/dev/null", "-q", "http://localhost:${MLFLOW_PORT}/"]
+      interval: 15s
+      timeout: 15s
+      retries: 3

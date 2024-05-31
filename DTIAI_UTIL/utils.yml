@@ -1,0 +1,57 @@
+version: "3.5"
+services:
+  portainer:
+    image: portainer/portainer:latest
+    ports:
+      - 9000:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /data/DTIAI_UTIL/Portainer_data:/data
+    networks:
+      - PDTIAI
+    deploy:
+      restart_policy:
+        condition: any
+  jupyterlab:
+    image: ctilab/jupyterlab:latest
+    command: "jupyter lab --ip 0.0.0.0 --port 8780 --notebook-dir=/workspace --allow-root"
+    ports:
+      - 8780:8780
+    volumes:
+      - /data/DTIAI_AIRFLOW:/workspace
+    networks:
+      - PDTIAI
+    deploy:
+      restart_policy:
+        condition: any
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+  health_check:
+    image: ctilab/health_check:latest
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    ports:
+      - 7972:7972
+    volumes:
+      - /data/DTIAI_UTIL/Health_Check:/home/ctilab
+    networks:
+      - PDTIAI
+    deploy:
+      restart_policy:
+        condition: any
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+  health_check_alert:
+    image: ctilab/health_check_alert:latest
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    volumes:
+      - /data/DTIAI_UTIL/Health_Check_Alert:/home/ctilab
+    networks:
+      - PDTIAI
+    deploy:
+      restart_policy:
+        condition: any
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+
+networks:
+  PDTIAI:

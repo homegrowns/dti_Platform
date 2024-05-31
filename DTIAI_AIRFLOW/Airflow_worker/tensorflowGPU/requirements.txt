@@ -1,0 +1,7 @@
+pandas
+clickhouse-connect
+numpy
+tensorflow
+scikit-learn
+tqdm
+swifter

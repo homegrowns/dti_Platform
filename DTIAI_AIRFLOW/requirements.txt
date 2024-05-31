@@ -1,0 +1,14 @@
+tqdm
+numpy
+pandas
+scikit-learn
+matplotlib
+clickhouse-connect
+tqdm
+psutil
+GPUtil
+fastapi
+uvicorn[standard]
+docker
+swifter
+tensorflow

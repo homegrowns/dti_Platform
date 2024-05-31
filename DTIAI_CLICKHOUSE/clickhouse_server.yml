@@ -1,0 +1,48 @@
+version: "3.5"
+services:
+  clickhouse_server:
+    image: ctilab/clickhouse-server:23.4.2.11
+    logging:
+      driver: "json-file"
+      options:
+        max-file: 5
+        max-size: 10m
+    environment:
+      clickhouse_setting_ip: "127.0.0.1"
+    volumes:
+      - /data/PDTIAI_platform/DTIAI_CLICKHOUSE/config/config.xml:/etc/clickhouse-server/config.xml
+      - /data/PDTIAI_platform/DTIAI_CLICKHOUSE/config/users.xml:/etc/clickhouse-server/users.xml
+      - /data/PDTIAI_platform/DTIAI_CLICKHOUSE/log:/var/log/clickhouse-server
+      - /data/PDTIAI_platform/DTIAI_CLICKHOUSE/click_data:/var/lib/clickhouse
+    ports:
+      - 8123:8123
+      - 9001:9001
+      - 9011:9011
+    networks:
+      - PDTIAI
+    ulimits:
+      nproc:
+        soft: 300000
+        hard: 300000
+      nofile:
+        soft: 999999
+        hard: 999999
+    deploy:
+      restart_policy:
+        condition: any
+      placement:
+        constraints: [node.role == manager]
+  tabix:
+    image: ctilab/tabix:latest
+    ports:
+      - 8081:80
+    networks:
+      - PDTIAI
+    deploy:
+      restart_policy:
+        condition: any
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  PDTIAI:

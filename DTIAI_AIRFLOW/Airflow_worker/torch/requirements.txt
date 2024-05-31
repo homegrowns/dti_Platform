@@ -1,0 +1,8 @@
+pandas
+clickhouse-connect
+numpy
+scikit-learn
+tqdm
+swifter
+transformers== 4.34.0
+datasets
